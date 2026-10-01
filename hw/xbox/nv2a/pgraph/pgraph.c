@@ -514,10 +514,31 @@ static const struct {
 #undef DEF_METHOD_CASE_4_OFFSET
 #undef DEF_METHOD_CASE_4
 
+// --- DUMP TEMPORAL DE PUSHBUFFER PARA COMPARAR CON PORT PC ---
+static FILE *g_pb_trace = NULL;
+static uint32_t g_pb_frame_num = 0;
+
 static void pgraph_method_log(unsigned int subchannel,
                               unsigned int graphics_class,
                               unsigned int method, uint32_t parameter)
 {
+    if (!g_pb_trace) {
+        g_pb_trace = fopen("xemu_nv2a_commands.log", "w");
+    }
+
+    if (g_pb_trace) {
+        // Si el método es SWAP / PRESENT (0x0100 o flip de superficie 0x0130 / 0x0128), marcamos fin de frame
+        if (method == 0x0100 || method == 0x0130 || method == 0x0128) {
+            g_pb_frame_num++;
+            fprintf(g_pb_trace, "=== FLIP / PRESENT FRAME %u ===\n", g_pb_frame_num);
+            fflush(g_pb_trace);
+        }
+
+        // Imprime: Subcanal, Método NV2A en Hex y Parámetro en Hex
+        fprintf(g_pb_trace, "Subc: %u | Method: 0x%04X | Param: 0x%08X\n",
+                subchannel, method, parameter);
+    }
+
     const char *method_name = "?";
     static unsigned int last = 0;
     static unsigned int count = 0;
